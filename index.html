@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>All or Nothing</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #000000;
+            --subtle-gray: #f4f4f4;
+            --border-color: #e0e0e0;
+            --danger-color: #ff4444;
+            --quote-color: #555555;
+        }
+
+        /* Dark Mode Overrides */
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --accent-color: #ffffff;
+            --subtle-gray: #1e1e1e;
+            --border-color: #333333;
+            --danger-color: #ff6b6b;
+            --quote-color: #aaaaaa;
+        }
+
+        /* Toggle Switch Styles */
+        .settings-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Ensure inputs match theme */
+        input[type="text"] {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header Area */
+        .header {
+            padding: 2rem 1.5rem 1rem;
+            background: var(--bg-color);
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        .streak-container {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .streak-count {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -2px;
+        }
+
+        .streak-label {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        /* Main Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 1.5rem 2rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Tab Navigation */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+            position: sticky;
+            top: 0;
+            background: var(--bg-color);
+            z-index: 10;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #888;
+            cursor: pointer;
+            padding-bottom: 4px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--text-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        /* Task List */
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 1.25rem 0;
+            border-bottom: 1px solid var(--subtle-gray);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .task-checkbox {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            margin-right: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .task-checkbox:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        .task-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 16px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .task-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            transition: color 0.2s;
+            flex: 1;
+        }
+
+        .task-checkbox:checked + .task-text {
+            color: #ccc;
+            text-decoration: line-through;
+        }
+
+        /* Quote Styles */
+        .quote-item {
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--subtle-gray);
+            animation: fadeIn 0.3s ease-out;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .quote-text {
+            font-family: "Georgia", serif;
+            font-style: italic;
+            color: var(--quote-color);
+            font-size: 1.1rem;
+            line-height: 1.5;
+            padding-right: 1rem;
+        }
+
+        /* Manage View Styles */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .add-btn {
+            padding: 0 1.5rem;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--border-color);
+            font-size: 1.5rem;
+            padding: 0 0.5rem;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger-color);
+        }
+
+        /* Hidden/Visible States */
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            color: #888;
+            margin-top: 3rem;
+            font-style: italic;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <div class="streak-container">
+            <div class="streak-count" id="streak-display">0</div>
+            <div class="streak-label">Current Streak</div>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="switchTab('today')">Today</button>
+        <button class="tab-btn" onclick="switchTab('quotes')">Quotes</button>
+        <button class="tab-btn" onclick="switchTab('manage')">Manage</button>
+    </nav>
+
+    <main class="content">
+        <!-- TODAY VIEW -->
+        <div id="today-view" class="view active">
+            <ul id="today-list" class="task-list">
+                <!-- Tasks injected here via JS -->
+            </ul>
+            <div id="today-empty" class="empty-state" style="display: none;">
+                No habits set. Go to "Manage" to add some!
+            </div>
+        </div>
+
+        <!-- QUOTES VIEW -->
+        <div id="quotes-view" class="view">
+            <div class="input-group">
+                <input type="text" id="new-quote-input" placeholder="Add a daily quote...">
+                <button class="add-btn" onclick="addQuote()">Save</button>
+            </div>
+            <div id="quotes-empty" class="empty-state" style="display: none;">
+                No quotes yet. Save something inspiring!
+            </div>
+            <ul id="quotes-list" class="task-list">
+                <!-- Quotes injected here -->
+            </ul>
+        </div>
+
+        <!-- MANAGE VIEW -->
+        <div id="manage-view" class="view">
+            <!-- Dark Mode Toggle -->
+            <div class="settings-group">
+                <span class="task-text">Dark Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="theme-toggle" onchange="toggleTheme()">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="new-habit-input" placeholder="Enter a new habit...">
+                <button class="add-btn" onclick="addHabit()">Add</button>
+            </div>
+            <ul id="manage-list" class="task-list">
+                <!-- Manage list injected here -->
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        const STORAGE_KEY = 'allOrNothingData_v2'; // Bumped version for new schema
+        
+        let appData = {
+            habits: [], 
+            completedToday: [], 
+            streak: 0,
+            lastCompletionDate: null,
+            currentDate: null,
+            quotes: [],
+            theme: 'light' // Default theme
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            loadData();
+            checkStreakIntegrity();
+            applyTheme(); // Apply theme on load
+            render();
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            
+            // Migration support from v1 (if user has old data)
+            const oldSaved = localStorage.getItem('allOrNothingData_v1');
+            
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Ensure new properties exist if loading from slightly older version
+                if (!parsed.quotes) parsed.quotes = [];
+                if (!parsed.theme) parsed.theme = 'light'; // Ensure theme exists
+                appData = parsed;
+            } else if (oldSaved) {
+                // Migrate v1 data to v2
+                const oldData = JSON.parse(oldSaved);
+                appData = { ...appData, ...oldData };
+                appData.quotes = []; // Initialize quotes
+                localStorage.removeItem('allOrNothingData_v1'); // Cleanup
+            } else {
+                // Default data for fresh users
+                appData.habits = ['Drink 2L Water', 'Read 10 Pages', 'No Sugar'];
+                appData.quotes = [{ text: "The journey of a thousand miles begins with a single step.", date: getTodayString() }];
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+            render();
+        }
+
+        // --- CORE LOGIC ---
+        function getTodayString() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function toggleTheme() {
+            appData.theme = appData.theme === 'light' ? 'dark' : 'light';
+            applyTheme();
+            saveData();
+        }
+
+        function applyTheme() {
+            // Sets a data attribute on the HTML tag that CSS can target
+            document.documentElement.setAttribute('data-theme', appData.theme);
+            
+            // Update the toggle button state if it exists
+            const toggle = document.getElementById('theme-toggle');
+            if (toggle) {
+                toggle.checked = (appData.theme === 'dark');
+            }
+        }
+
+        function getYesterdayString() {
+            const d = new Date();
+            d.setDate(d.getDate() - 1);
+            return d.toISOString().split('T')[0];
+        }
+
+        function checkStreakIntegrity() {
+            const today = getTodayString();
+            const yesterday = getYesterdayString();
+            
+            if (appData.currentDate !== today) {
+                appData.completedToday = [];
+                appData.currentDate = today;
+                
+                if (appData.lastCompletionDate === yesterday) {
+                    // Streak safe
+                } else if (appData.lastCompletionDate === today) {
+                    // Already done today
+                } else {
+                    appData.streak = 0;
+                }
+                saveData();
+            }
+        }
+
+        function toggleTask(habitName) {
+            const index = appData.completedToday.indexOf(habitName);
+            if (index > -1) {
+                appData.completedToday.splice(index, 1);
+                if (appData.lastCompletionDate === getTodayString()) {
+                    appData.streak = Math.max(0, appData.streak - 1);
+                    appData.lastCompletionDate = getYesterdayString();
+                }
+            } else {
+                appData.completedToday.push(habitName);
+                checkAllCompleted();
+            }
+            saveData();
+        }
+
+        function checkAllCompleted() {
+            if (appData.habits.length === 0) return;
+            const allDone = appData.habits.every(h => appData.completedToday.includes(h));
+            if (allDone) {
+                const today = getTodayString();
+                if (appData.lastCompletionDate !== today) {
+                    appData.streak++;
+                    appData.lastCompletionDate = today;
+                    triggerConfetti();
+                }
+            }
+        }
+
+        // --- MANAGE HABITS ---
+        function addHabit() {
+            const input = document.getElementById('new-habit-input');
+            const val = input.value.trim();
+            if (val && !appData.habits.includes(val)) {
+                appData.habits.push(val);
+                input.value = '';
+                saveData();
+            }
+        }
+
+        function deleteHabit(habitName) {
+            appData.habits = appData.habits.filter(h => h !== habitName);
+            appData.completedToday = appData.completedToday.filter(h => h !== habitName);
+            saveData();
+        }
+
+        // --- QUOTES LOGIC ---
+        function addQuote() {
+            const input = document.getElementById('new-quote-input');
+            const val = input.value.trim();
+            if (val) {
+                // Add new quote to the BEGINNING of the array so it shows at top
+                appData.quotes.unshift({
+                    text: val,
+                    date: getTodayString()
+                });
+                input.value = '';
+                saveData();
+            }
+        }
+
+        function deleteQuote(index) {
+            appData.quotes.splice(index, 1);
+            saveData();
+        }
+
+        // --- UI RENDERING ---
+        function render() {
+            // 1. Streak
+            document.getElementById('streak-display').textContent = appData.streak;
+
+            // 2. Today List
+            const todayList = document.getElementById('today-list');
+            todayList.innerHTML = '';
+            if (appData.habits.length === 0) {
+                document.getElementById('today-empty').style.display = 'block';
+            } else {
+                document.getElementById('today-empty').style.display = 'none';
+                appData.habits.forEach(habit => {
+                    const isChecked = appData.completedToday.includes(habit);
+                    const li = document.createElement('li');
+                    li.className = 'task-item';
+                    li.innerHTML = `
+                        <input type="checkbox" class="task-checkbox" 
+                            ${isChecked ? 'checked' : ''} 
+                            onchange="toggleTask('${habit}')">
+                        <span class="task-text">${habit}</span>
+                    `;
+                    todayList.appendChild(li);
+                });
+            }
+
+            // 3. Manage List
+            const manageList = document.getElementById('manage-list');
+            manageList.innerHTML = '';
+            appData.habits.forEach(habit => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.innerHTML = `
+                    <span class="task-text">${habit}</span>
+                    <button class="delete-btn" onclick="deleteHabit('${habit}')">&times;</button>
+                `;
+                manageList.appendChild(li);
+            });
+
+            // 4. Quotes List
+            const quotesList = document.getElementById('quotes-list');
+            quotesList.innerHTML = '';
+            if (appData.quotes.length === 0) {
+                document.getElementById('quotes-empty').style.display = 'block';
+            } else {
+                document.getElementById('quotes-empty').style.display = 'none';
+                appData.quotes.forEach((quote, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'quote-item';
+                    li.innerHTML = `
+                        <div class="quote-text">"${quote.text}"</div>
+                        <button class="delete-btn" onclick="deleteQuote(${index})">&times;</button>
+                    `;
+                    quotesList.appendChild(li);
+                });
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`${tabName}-view`).classList.add('active');
+            
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(btn => {
+                if (btn.innerText.toLowerCase().includes(tabName)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#000', '#555', '#aaa']
+            });
+        }
+
+        // Run on load
+        init();
+
+        // Enter keys
+        document.getElementById('new-habit-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addHabit();
+        });
+        document.getElementById('new-quote-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') addQuote();
+        });
+
+    </script>
+</body>
+</html>
