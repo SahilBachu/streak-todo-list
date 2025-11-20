@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- FIX 1: viewport-fit=cover tells iPhone to use the whole screen -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- iOS Specific Tags for Fullscreen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AllOrNothing">
+
     <title>All or Nothing</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
@@ -100,15 +107,22 @@
             color: var(--text-color);
             margin: 0;
             padding: 0;
-            height: 100vh;
+            
+            /* FIX 2: Use 100dvh (dynamic height) to fix mobile browser sizing */
+            height: 100dvh;
+            
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            
+            /* FIX 3: Add padding for iPhone Home Indicator (the swipe bar) */
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         /* Header Area */
         .header {
-            padding: 2rem 1.5rem 1rem;
+            /* Add padding to top for Status Bar (time/battery) */
+            padding: max(2rem, env(safe-area-inset-top)) 1.5rem 1rem;
             background: var(--bg-color);
             border-bottom: 1px solid transparent;
             transition: border-color 0.3s ease;
@@ -141,6 +155,7 @@
             overflow-y: auto;
             padding: 0 1.5rem 2rem;
             scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
 
         /* Tab Navigation */
